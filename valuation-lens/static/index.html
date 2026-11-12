@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valuation Lens — Stock Metrics Screener</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23070b14%22/%3E%3Cpath d=%22M7 21l6-7 4 3 8-9%22 fill=%22none%22 stroke=%22%2334d399%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="vendor/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" class="logo" aria-hidden="true"><circle cx="14" cy="14" r="9" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M21 21l7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M9 17l3-4 3 2 4-6" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Valuation<b>Lens</b></span>
+  </div>
+  <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></div>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>Value any stock in <span class="grad">seconds</span>.</h1>
+    <p class="sub">Enter tickers separated by commas. Live price, valuation, quality and yield metrics — computed from the latest filings.</p>
+
+    <form class="search" id="searchForm" autocomplete="off">
+      <div class="chips" id="chips">
+        <input id="tickerInput" placeholder="KO, PEP, PG, WMT, COST…" spellcheck="false" aria-label="Ticker symbols">
+      </div>
+      <button type="submit" class="btn-primary" id="goBtn">
+        <span class="lbl">Analyze</span>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+    <div class="presets">
+      <span>Presets:</span>
+      <button data-preset="KO,PEP,PG,WMT,COST,PM,MO,MDLZ,CL,KMB">Staples Giants</button>
+      <button data-preset="GIS,HSY,KHC,CAG,SJM,HRL,MKC">Packaged Food</button>
+      <button data-preset="KO,PEP,KDP,MNST,STZ">Beverages</button>
+      <button data-preset="WMT,COST,TGT,KR,DG,DLTR">Staples Retail</button>
+      <button data-preset="PG,CL,KMB,CHD,CLX,EL">Household &amp; Personal</button>
+    </div>
+  </section>
+
+  <div id="errorBar" class="error-bar hidden"></div>
+
+  <section id="empty" class="empty">
+    <div class="empty-card">
+      <div class="empty-icon">⌁</div>
+      <h3>No tickers yet</h3>
+      <p>Pick a preset above or type your own symbols to build a live comparison.</p>
+    </div>
+  </section>
+
+  <section id="results" class="hidden">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Metrics table</h2>
+          <p class="muted" id="asOf"></p>
+        </div>
+        <div class="toolbar">
+          <div class="seg" id="orientSeg">
+            <button data-v="metrics" class="on">Metrics as rows</button>
+            <button data-v="tickers">Tickers as rows</button>
+          </div>
+          <label class="toggle"><input type="checkbox" id="heatToggle" checked><span></span>Heatmap</label>
+          <button class="btn-ghost" id="csvBtn">Export CSV</button>
+          <button class="btn-ghost" id="shareBtn">Copy link</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table id="table"></table></div>
+      <p class="legend"><span class="sw good"></span>More attractive vs. peers <span class="sw bad"></span>Less attractive vs. peers · Click any ticker for detail</p>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Compare</h2>
+          <select id="metricSelect"></select>
+        </div>
+        <div class="chart-box"><canvas id="barChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>Value vs. Quality</h2><p class="muted">Forward P/E vs. ROIC · bubble = market cap</p></div>
+        </div>
+        <div class="chart-box"><canvas id="scatterChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>Price positioning</h2><p class="muted">Where price sits in its 52-week range, and distance from 5-year high</p></div>
+        </div>
+        <div id="ranges" class="ranges"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>Cash yields</h2><p class="muted">FCF yield vs. dividend yield — coverage at a glance</p></div>
+        </div>
+        <div class="chart-box"><canvas id="yieldChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2>Relative performance</h2><p class="muted">Total return, rebased to 0%</p></div>
+        <div class="seg" id="perfSeg">
+          <button data-v="6mo">6M</button>
+          <button data-v="1y" class="on">1Y</button>
+          <button data-v="2y">2Y</button>
+          <button data-v="5y">5Y</button>
+        </div>
+      </div>
+      <div class="chart-box tall"><canvas id="perfChart"></canvas></div>
+    </div>
+
+    <details class="panel method">
+      <summary><h2>Methodology</h2><span class="muted">How every number is calculated</span></summary>
+      <div class="method-grid" id="methodGrid"></div>
+    </details>
+  </section>
+</main>
+
+<footer>
+  Data: Yahoo Finance via yfinance, cached 15 min. For research and education — not investment advice.
+</footer>
+
+<!-- Detail drawer -->
+<div class="drawer-bg hidden" id="drawerBg"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <button class="drawer-x" id="drawerX" aria-label="Close">×</button>
+  <div id="drawerBody"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+<div class="loader hidden" id="loader"><div class="spinner"></div><p id="loaderText">Pulling filings…</p></div>
+
+<script src="app.js"></script>
+</body>
+</html>
